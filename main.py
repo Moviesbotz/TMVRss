@@ -150,7 +150,7 @@ def check_for_new_links():
       for mlink in magnet_links:
         magnet_arr.append(mlink[1])
   asyncio.run(send_magnet_to_telegram(None, "Restarting..."))
-  print("Credit to Replit Dev: ", username)
+  print("Credits to Developer: ", username)
   while True:
     content = get_website_content(website_url)
     links = extract_links_from_content(content)
