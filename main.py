@@ -3,7 +3,6 @@ import re
 import requests
 import time
 import os
-from threading import Thread
 from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.constants import ParseMode
@@ -172,4 +171,4 @@ def check_for_new_links():
 
 keep_alive()
 if __name__ == "__main__":
-  Thread(target=check_for_new_links).start()
+  check_for_new_links()
