@@ -3,6 +3,7 @@ import re
 import requests
 import time
 import os
+from threading import Thread
 from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.constants import ParseMode
@@ -114,12 +115,14 @@ async def send_magnet_to_telegram(title, link):
   bot = Bot(token=bot_token)
   try:
     if title:
+      message = f"<b>Name:</b> <i>{title}</i>\n\n<b>URL:</b> <code>{link}</code>"
       await bot.send_message(chat_id=chat_id,
-                             text=f"<b>Name: </b><i>{title}</i>",
+                             text=message,
                              parse_mode=ParseMode.HTML)
-    await bot.send_message(chat_id=chat_id,
-                           text=f"<code>{link}</code>",
-                           parse_mode=ParseMode.HTML)
+    else:
+      await bot.send_message(chat_id=chat_id,
+                             text=f"<code>{link}</code>",
+                             parse_mode=ParseMode.HTML)
   except:
     await asyncio.sleep(60)
     # await bot.send_message(
@@ -136,6 +139,7 @@ async def send_magnet_to_telegram(title, link):
 
 
 def check_for_new_links():
+  print("✅ Bot Started... Monitoring site for new links.")
   content = get_website_content(website_url)
   # print(f"content: \n{content}")
   links = extract_links_from_content(content)
@@ -146,7 +150,6 @@ def check_for_new_links():
     if magnet_links:
       for mlink in magnet_links:
         magnet_arr.append(mlink[1])
-  print(len(magnet_arr))
   asyncio.run(send_magnet_to_telegram(None, "Restarting..."))
   print("Credit to Replit Dev: ", username)
   while True:
@@ -169,4 +172,4 @@ def check_for_new_links():
 
 keep_alive()
 if __name__ == "__main__":
-  check_for_new_links()
+  Thread(target=check_for_new_links).start()
