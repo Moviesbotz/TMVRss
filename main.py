@@ -3,26 +3,36 @@ import re
 import requests
 import time
 import os
+from threading import Thread
 from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram import Bot
 from urllib.parse import urlparse, parse_qs
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 from keep_alive import keep_alive
 
-username = os.environ['REPL_OWNER']
+bot_owner = os.environ['REPL_OWNER']
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token
 bot_token = os.environ['BOT_TOKEN']
 # Replace 'YOUR_CHAT_ID' with the chat ID where you want to send the new links
 # chat_id = '-1001765000487'
 chat_id = os.environ['CHAT_ID']
 # Website URL to monitor for new links
-website_url = os.environ['WEBSITE_URL']  #TMV
+log_id = os.environ['LOG_ID']
+website_url = os.environ['WEBSITE_URL']
 global arr
 global magnet_arr
 arr = []
 magnet_arr = []
+
+url = f"https://api.telegram.org/bot{bot_token}/getMe"
+
+response = requests.get(url)
+data = response.json()
+bot_name = "<code>" + data['result']['first_name'] + "</code>"
+developer = "<b>" + f"{bot_owner}" + "</b>"
 
 
 def get_magnet_links(url):
@@ -137,6 +147,19 @@ async def send_magnet_to_telegram(title, link):
                            parse_mode=ParseMode.HTML)
 
 
+async def send_message_to_telegram(msg, chat):
+  bot = Bot(token=bot_token)
+  try:
+    await bot.send_message(chat_id=chat,
+                           text=f"{msg}",
+                           parse_mode=ParseMode.HTML)
+  except:
+    await asyncio.sleep(60)
+    await bot.send_message(chat_id=chat,
+                           text=f"{msg}",
+                           parse_mode=ParseMode.HTML)
+
+
 def check_for_new_links():
   print("✅ Bot Started... Monitoring site for new links.")
   content = get_website_content(website_url)
@@ -149,9 +172,10 @@ def check_for_new_links():
     if magnet_links:
       for mlink in magnet_links:
         magnet_arr.append(mlink[1])
-  asyncio.run(send_magnet_to_telegram(None, "Restarting..."))
-  print("Credits to Developer: ", username)
-  asyncio.run(send_magnet_to_telegram(None, "Credits to Developer: " + username))
+  asyncio.run(send_message_to_telegram(bot_name + " Restarted ✅", log_id))
+  print("Credit to Replit Dev: ", bot_owner)
+  asyncio.run(
+      send_message_to_telegram("Credits to Developer: " + developer, log_id))
   while True:
     content = get_website_content(website_url)
     links = extract_links_from_content(content)
@@ -167,9 +191,33 @@ def check_for_new_links():
             magnet_arr.append(link)
             asyncio.run(send_magnet_to_telegram(text, link))
 
+    print("Waiting for 5 minutes before checking again...")
+    asyncio.run(
+        send_message_to_telegram(
+            bot_name + " waiting for 5 minutes before checking again...",
+            log_id))
     time.sleep(300)  # Wait for 5 minutes before checking again
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  await update.message.reply_text("✅ Bot is alive and monitoring the website!")
+
+
+def start_bot_listener():
+  print("Starting bot listener...")
+  application = Application.builder().token(bot_token).build()
+
+  application.add_handler(CommandHandler("start", start))
+
+  # Run the bot in polling mode
+  application.run_polling()
 
 
 keep_alive()
 if __name__ == "__main__":
-  check_for_new_links()
+  # Start the link checker in a separate thread
+  monitor_thread = Thread(target=check_for_new_links)
+  monitor_thread.start()
+
+  # Start the Telegram bot (must run in the main thread)
+  start_bot_listener()
